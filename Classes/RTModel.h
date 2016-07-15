@@ -8,7 +8,15 @@
 
 #import <Foundation/Foundation.h>
 
-@interface RTModel : NSObject<NSCoding>
+@protocol RTModel <NSObject, NSCoding>
+
+-(instancetype) initWithJSON:(NSDictionary*)json;
+
+-(NSDictionary*) JSONObject;
+
+@end
+
+@interface RTModel : NSObject<RTModel>
 
 -(instancetype) initWithJSON:(NSDictionary*)json;
 

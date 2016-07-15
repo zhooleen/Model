@@ -19,10 +19,12 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     
-    TestModel1();
+//    TestModel1();
+//    
+//    TestModel2();
     
-    TestModel2();
-    // Do any additional setup after loading the view, typically from a nib.
+    TestModelProtocol();
+
 }
 
 - (void)didReceiveMemoryWarning {

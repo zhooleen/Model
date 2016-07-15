@@ -62,6 +62,7 @@
             info.type = [self typeForProperty:property];
             [array addObject:info];
         }
+        free(properties);
         ret = [array copy];
         self.classInfos[klassName] = ret;
     }
@@ -154,6 +155,73 @@
         id value = [model valueForKey:info.name];
         [coder encodeObject:value forKey:info.name];
     }
+}
+
+static void RTModelSetter(id self, SEL cmd, id value) {
+    NSString *name = NSStringFromSelector(cmd);
+    name = [NSString stringWithFormat:@"%@%@", [[name substringWithRange:(NSRange){3,1}] lowercaseString], [name substringWithRange:(NSRange){4, name.length-5}]];
+    Ivar var = class_getInstanceVariable([self class], [name UTF8String]);
+    object_setIvar(self, var, value);
+}
+
+static id RTModelGetter(id self, SEL cmd) {
+    NSString *name = [NSString stringWithFormat:@"%@", NSStringFromSelector(cmd)];
+    Ivar var = class_getInstanceVariable([self class], [name UTF8String]);
+    if(var) {
+        return object_getIvar(self, var);
+    } else {
+        return nil;
+    }
+}
+
+- (Class) generateClassForProtocol:(Protocol*)protocol {
+    if(!protocol_conformsToProtocol(protocol, @protocol(RTModel))) {
+        return nil;
+    }
+    dispatch_semaphore_wait(self.semaphore, DISPATCH_TIME_FOREVER);
+    
+    Class klass = objc_getClass(protocol_getName(protocol));
+    if(klass) {
+        dispatch_semaphore_signal(self.semaphore);
+        return klass;
+    }
+    
+    klass = objc_allocateClassPair([RTModel class], protocol_getName(protocol), 0);
+    NSAssert(klass != nil, @"");
+    unsigned int count = 0;
+    objc_property_t *properties = protocol_copyPropertyList(protocol, &count);
+    for(int i = 0; i < count; ++i) {
+        objc_property_t property = properties[i];
+        unsigned int attrCount = 0;
+        objc_property_attribute_t *attrs = property_copyAttributeList(property, &attrCount);
+        const char *propertyName = property_getName(property);
+        BOOL success = class_addProperty(klass, propertyName, attrs, attrCount);
+        if(success) {
+            NSUInteger size;
+            NSUInteger alignment;
+            NSGetSizeAndAlignment("*", &size, &alignment);
+            success = class_addIvar(klass, propertyName, size, alignment, "*");
+            if(success) {
+                NSString *name = [NSString stringWithCString:propertyName encoding:NSUTF8StringEncoding];
+                SEL getterSel = NSSelectorFromString(name);
+                class_addMethod(klass, getterSel, (IMP)RTModelGetter, "@@:");
+                NSString *capital = [NSString stringWithFormat:@"set%@:", [name capitalizedString]];
+                SEL setterSel = NSSelectorFromString(capital);
+                class_addMethod(klass, setterSel, (IMP)RTModelSetter, "v@:@");
+            } else {
+                printf("Add var %s failed.\n", propertyName);
+            }
+        }
+        free(attrs);
+    }
+    free(properties);
+    objc_registerClassPair(klass);
+    dispatch_semaphore_signal(self.semaphore);
+    return klass;
+}
+
++ (Class) generateClassForProtocol:(Protocol*)protocol {
+    return [[RTModelUtility utility] generateClassForProtocol:protocol];
 }
 
 @end

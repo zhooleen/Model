@@ -21,6 +21,9 @@
 
 + (void) encodeModel:(RTModel*)model withcoder:(NSCoder*)coder;
 
+/**
+ return the subclass of RTModel
+ */
 + (Class) generateClassForProtocol:(Protocol*)protocol;
 
 @end

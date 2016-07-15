@@ -34,8 +34,16 @@ RTImmutableProperty NSArray *models; //RTTestModel1
 @end
 
 
+@protocol RTXXXModel <RTModel>
+
+RTImmutableProperty NSString *title;
+
+RTImmutableProperty NSString *subtitle;
+
+@end
+
 FOUNDATION_EXTERN void TestModel1();
 
 FOUNDATION_EXTERN void TestModel2();
 
-FOUNDATION_EXTERN void TestModel2Archive();
+FOUNDATION_EXTERN void TestModelProtocol();
